@@ -133,12 +133,14 @@ fn main() {
                             .map(|i| format!("{}", i))
                             .collect::<Vec<String>>()
                             .join(";"),
+                        input_indices_count: group.input_indices.len() as u64,
                         output_indices: group
                             .output_indices
                             .iter()
                             .map(|i| format!("{}", i))
                             .collect::<Vec<String>>()
                             .join(";"),
+                        output_indices_count: group.output_indices.len() as u64,
                         cycle,
                         runtime_nanoseconds,
                         script_code_hash: group.script.code_hash().unpack(),
@@ -161,7 +163,9 @@ struct Record {
     tx_hash: H256,
     script_group_type: ScriptGroupType,
     input_indices: String,
+    input_indices_count: u64,
     output_indices: String,
+    output_indices_count: u64,
     cycle: u64,
     runtime_nanoseconds: u128,
     script_code_hash: H256,
