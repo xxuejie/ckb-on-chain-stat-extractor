@@ -118,10 +118,10 @@ fn main() {
                 }
                 let runtime_nanoseconds = total_runtime.as_nanos() / vm_sample_times as u128;
 
-                let script_data = verifier
-                    .extract_script(&group.script)
-                    .expect("extract script");
-                let script_data_hash = blake2b_256(script_data).into();
+                let script_data_hash = match verifier.extract_script(&group.script) {
+                    Ok(data) => Some(blake2b_256(data).into()),
+                    Err(_) => None,
+                };
 
                 writer
                     .serialize(Record {
@@ -166,7 +166,7 @@ struct Record {
     runtime_nanoseconds: u128,
     script_code_hash: H256,
     script_hash_type: u8,
-    script_data_hash: H256,
+    script_data_hash: Option<H256>,
     block_number: u64,
     block_hash: H256,
     block_timestamp: String,
