@@ -17,9 +17,13 @@ use ckb_types::{
     H256,
 };
 use clap::{arg, command, value_parser};
+use lazy_static::lazy_static;
+use lru::LruCache;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fs::File;
+use std::num::NonZeroUsize;
+use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 fn main() {
@@ -247,6 +251,14 @@ fn resolve_out_point(
     out_point: &OutPoint,
     client: &mut CkbRpcClient,
 ) -> (CellOutput, JsonBytes, Option<H256>) {
+    let key: packed::OutPoint = out_point.clone().into();
+
+    {
+        if let Some(result) = CACHE.lock().expect("lock").get(&key).cloned() {
+            return result;
+        }
+    }
+
     let tx_with_status = client
         .get_transaction(out_point.tx_hash.clone())
         .expect("rpc")
@@ -270,7 +282,19 @@ fn resolve_out_point(
     let data = tx.inner.outputs_data[out_point.index.value() as usize].clone();
     let header_hash = tx_with_status.tx_status.block_hash.clone();
 
+    {
+        CACHE.lock().expect("lock").push(
+            key,
+            (cell_output.clone(), data.clone(), header_hash.clone()),
+        );
+    }
+
     (cell_output, data, header_hash)
+}
+
+lazy_static! {
+    static ref CACHE: Mutex<LruCache<packed::OutPoint, (CellOutput, JsonBytes, Option<H256>)>> =
+        Mutex::new(LruCache::new(NonZeroUsize::new(1000).expect("non zero")));
 }
 
 struct DummyResourceLoader {}
